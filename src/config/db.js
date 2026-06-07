@@ -1,20 +1,24 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const dbconnenction = async () => {
-    try {
-        if (!process.env.MONGO_URI) {
-            console.error("MONGO_URI is undefined! Check Vercel Settings.");
-            return;
-        }
-        
-        await mongoose.connect(process.env.MONGO_URI, {
-            serverSelectionTimeoutMS: 5000
-        });
-        
-        console.log('Database connected successfully');
-    }
-    catch (error) {
-        console.error('Error connecting to database:', error.message);
-    }
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
 }
-export default dbconnenction;
+
+const dbConnection = async () => {
+  if (cached.conn) return cached.conn;
+
+  if (!process.env.MONGO_URI) {
+    throw new Error("MONGO_URI is missing");
+  }
+
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(process.env.MONGO_URI);
+  }
+
+  cached.conn = await cached.promise;
+  return cached.conn;
+};
+
+export default dbConnection;
